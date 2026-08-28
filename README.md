@@ -155,6 +155,11 @@ POST /api/internal/daily-run
 X-Cron-Secret: <CRON_SECRET>
 ```
 
+Final Outcome View:
+<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/2fbbcd5b-0d3e-47e0-ae9e-bf775bbee6e0" />
+
+
+
 ## Notes
 
 This project deliberately avoids a scheduler running inside the web process. Render's dedicated cron service triggers the daily generation, which is more reliable than depending on an always-running web process.
