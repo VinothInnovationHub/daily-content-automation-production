@@ -1,16 +1,35 @@
-# Daily Content Automation — Production
+# Daily Content Automation
 
-Clean FastAPI application for:
+A production-minded FastAPI service for teams that need a reliable daily content workflow without handing publishing authority to an LLM. It researches a topic, generates LinkedIn and long-form drafts, and requires a human decision before anything can be published.
 
-1. Daily content generation at 11:00 Asia/Kolkata.
-2. Research/content workflow through a selectable LLM provider.
-3. Current-topic research (optional Tavily provider).
-4. LinkedIn post generation.
-5. Long-form article generation.
-6. Human editing and approval.
-7. Explicit `Approve & Publish` action.
-8. LinkedIn publishing through the current LinkedIn Posts API.
-9. Medium content export/manual publishing.
+## Why this project
+
+- **Human approval is mandatory.** Generated material remains in `PENDING_APPROVAL` until an administrator explicitly approves it.
+- **Publishing is guarded.** LinkedIn publishing is opt-in and disabled by default; every publish action follows an explicit approval path.
+- **Content is research-aware.** Selectable LLM providers and optional Tavily research support current, credible technology content.
+- **Operations are deployment-ready.** Render's dedicated cron service triggers the workflow at 11:00 Asia/Kolkata without relying on an in-process scheduler.
+- **Medium remains compliant.** Articles can be reviewed and exported for manual publishing; the service intentionally does not automate Medium posting.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Cron[Render cron trigger] --> API[FastAPI workflow service]
+  Admin[Administrator] --> Dashboard[Review dashboard]
+  Dashboard --> API
+  API --> Research[LLM and optional Tavily research]
+  Research --> Review[Drafts pending approval]
+  Review -->|Approve and publish| LinkedIn[LinkedIn Posts API]
+  Review -->|Export manually| Medium[Medium]
+```
+
+## Core workflow
+
+1. A scheduled or manual job creates a technology-content brief.
+2. The service researches and generates a LinkedIn post plus a long-form article.
+3. An administrator edits, approves, or rejects the content in the dashboard.
+4. Approved content can be published to LinkedIn when publishing is enabled.
+5. Long-form content is retained for compliant manual publication to Medium.
 
 ## Important publishing rule
 
