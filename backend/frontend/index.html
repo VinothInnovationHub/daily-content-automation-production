@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daily Content Automation</title>
+<style>
+body{font-family:Inter,Arial,sans-serif;background:#f5f7fb;margin:0;color:#172033}
+header{background:#111827;color:#fff;padding:22px 30px}
+main{max-width:1200px;margin:24px auto;padding:0 18px}
+.card{background:#fff;border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 10px #00000010}
+button{border:0;border-radius:8px;padding:10px 14px;margin:4px;cursor:pointer}
+.primary{background:#111827;color:#fff}.danger{background:#fee2e2}.ok{background:#dcfce7}
+textarea,input{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d1d5db;border-radius:8px;margin:6px 0 12px}
+.content{border-top:1px solid #e5e7eb;padding-top:16px;margin-top:16px}
+.badge{padding:4px 8px;border-radius:999px;background:#eef2ff}
+small{color:#6b7280}
+</style>
+</head>
+<body>
+<header><strong>Daily Content Automation</strong></header>
+<main>
+<div class="card">
+<h2>Admin Dashboard</h2>
+<input id="token" type="password" placeholder="Admin token">
+<button class="primary" onclick="loadJobs()">Load Jobs</button>
+</div>
+<div id="jobs"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function headers(){return {'Authorization':'Bearer '+$('token').value,'Content-Type':'application/json'}}
+async function api(path,opt={}){opt.headers={...headers(),...(opt.headers||{})};const r=await fetch(path,opt);const d=await r.json();if(!r.ok)throw new Error(d.detail||JSON.stringify(d));return d}
+async function loadJobs(){
+ try{
+  const jobs=await api('/api/jobs'); const root=$('jobs'); root.innerHTML='';
+  for(const j of jobs){
+   const c=document.createElement('div'); c.className='card';
+   c.innerHTML=`<h2>#${j.id} ${escapeHtml(j.topic)}</h2><span class="badge">${j.status}</span><p>${escapeHtml(j.perspective||'')}</p>`;
+   for(const x of j.contents||[]){
+    const el=document.createElement('div');el.className='content';
+    el.innerHTML=`<h3>${x.channel.toUpperCase()}</h3><input value="${escapeAttr(x.title)}" id="title-${x.id}"><textarea rows="12" id="body-${x.id}">${escapeHtml(x.body)}</textarea><small>Status: ${x.status}</small>`;
+    el.innerHTML+=`<div><button onclick="save(${x.id})">Save Edit</button></div>`;
+    c.appendChild(el);
+   }
+   const actions=document.createElement('div');
+   if(j.status==='DRAFT') actions.innerHTML='<button class="primary" onclick="runJob('+j.id+')">Generate</button>';
+   if(j.status==='PENDING_APPROVAL') actions.innerHTML='<button class="ok" onclick="approve('+j.id+')">Approve</button><button class="danger" onclick="rejectJob('+j.id+')">Reject</button><button class="primary" onclick="approvePublish('+j.id+')">Approve & Publish</button>';
+   if(j.status==='APPROVED') actions.innerHTML='<button class="primary" onclick="publishJob('+j.id+')">Publish</button>';
+   c.appendChild(actions);root.appendChild(c);
+  }
+ }catch(e){alert(e.message)}
+}
+async function runJob(id){try{await api('/api/jobs/'+id+'/run',{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
+async function approve(id){try{await api('/api/jobs/'+id+'/approve',{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
+async function approvePublish(id){if(!confirm('Publish approved content now?'))return;try{await api('/api/jobs/'+id+'/approve-and-publish',{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
+async function publishJob(id){if(!confirm('Publish now?'))return;try{await api('/api/jobs/'+id+'/publish',{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
+async function rejectJob(id){const reason=prompt('Reason for rejection:','Please revise the content.');if(reason===null)return;try{await api('/api/jobs/'+id+'/reject?reason='+encodeURIComponent(reason),{method:'POST'});await loadJobs()}catch(e){alert(e.message)}}
+async function save(id){try{await api('/api/contents/'+id,{method:'PATCH',body:JSON.stringify({title:$('title-'+id).value,body:$('body-'+id).value})});alert('Saved');await loadJobs()}catch(e){alert(e.message)}}
+function escapeHtml(s){return String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+function escapeAttr(s){return escapeHtml(s).replaceAll('"','&quot;')}
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: daily-content-automation
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: PUBLISH_ENABLED
+        value: "false"
+      - key: LINKEDIN_ENABLED
+        value: "false"
+      - key: LINKEDIN_ACCESS_TOKEN
+        sync: false
+      - key: LINKEDIN_AUTHOR_URN
+        sync: false
+      - key: LINKEDIN_VERSION
+        value: "202606"
+      - key: MEDIUM_ENABLED
+        value: "false"
+      - key: TIMEZONE
+        value: Asia/Kolkata
+      - key: DAILY_RUN_HOUR
+        value: "11"
+      - key: DAILY_RUN_MINUTE
+        value: "0"
+
+  - type: cron
+    name: daily-content-trigger
+    runtime: python
+    region: oregon
+    plan: starter
+    schedule: "30 5 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      python -c "import os,urllib.request;
+      req=urllib.request.Request(
+      os.environ['APP_URL']+'/api/internal/daily-run',
+      method='POST',
+      headers={'X-Cron-Secret':os.environ['CRON_SECRET']});
+      print(urllib.request.urlopen(req, timeout=120).read().decode())"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12
+      - key: APP_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
